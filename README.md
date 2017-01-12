@@ -1,7 +1,7 @@
 # RestaurantRatings
 Group Project - January 2017 BDA - Matt, Ahmad, Rachana, Sharjeel
 
-We explore the effect that ratings have on small and medium-sized (i.e. non-chain) restaurants in major US cities (depending on the amount of data available, we may limit analysis this to NYC). We'd use open APIs provided by Foursquare (and potentially Yelp) to access data on both reviews and check-ins (which we'd consider to be a proxy for sales). We considered the following questions:
+We explore the effect that ratings have on small and medium-sized (i.e. non-chain) restaurants in major US cities (depending on the amount of data available, we may limit analysis this to NYC). We use open APIs provided by Foursquare and Yelp to access data on both reviews and check-ins (which we consider to be a proxy for sales). We consider the following questions:
 
 1. do significant (and secular) changes in ratings affect check-ins for established restaurants?
 
