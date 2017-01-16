@@ -1,0 +1,44 @@
+---
+title: "Restaurant Ratings Group Project"
+author: "Matt"
+date: "January 16, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+We explore the effect that ratings have on small and medium-sized (i.e. non-chain) restaurants in major US cities (depending on the amount of data available, we may limit analysis this to NYC). We'd use open APIs provided by Foursquare (and potentially Yelp) to access data on both reviews and check-ins (which we'd consider to be a proxy for sales). We will first look at the data before we come up with one or more crisp research questions, but we're thinking about something along the lines of the following:
+ 
+1.     Do significant (and secular) changes in ratings affect check-ins for established restaurants?
+ 
+       The data that we are using from foursquare consists of check-ins over a given period of time for each restaurant.
+       Preparation of a treatment group: This consists of restaurants that have undergone a significant change in ratings (for e.g. a change >1) over a period of time.
+        o   We run logistic regressions on this data in order to determine the predictive power of various restaurant features on the outcome of interest namely changes in check-ins.
+        o   Using features that we identify as sufficiently predictive, we would conduct a propensity score matching ideally using “nearest neighbor matching”. This control group consists of restaurants that have not undergone a significant change in rating but are as similar as possible to the restaurants in the treatment group.
+              ·  We would use this matched control group to ascertain the impact of the change in rating to the restaurants in the treatment group.
+ 
+2.     To what extent does an increase (or decrease) in ratings explain the variance in check-ins? 
+        ·      Perform a regression analysis (using ordered logistic regression) to determine the correlation between ratings and check-ins
+ 
+3. For businesses with the same rating, how important is the distribution of ratings (i.e. does having a higher proportion of one-star ratings make a difference?) 
+        ·      Repeat approach of Step 1. with treatment groups selected based on variance of ratings in the 90th percentile
+Contact GitHub API Training Shop Blog About
+© 2017 GitHub, Inc. Terms Privacy Security Status Help
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
