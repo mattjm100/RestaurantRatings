@@ -1,7 +1,7 @@
 ---
-title: "Restaurant Ratings Group Project"
-author: "Matt"
-date: "January 16, 2017"
+title: "Restaurant Ratings Group Project - BDA January 2017"
+author: "Matt,Rachana,Sharjeel,Ahmad"
+date: "January 29, 2017"
 output: html_document
 ---
 
@@ -41,6 +41,15 @@ YelpBusinesses <- stream_in(file("C:/Users/Matthew/Documents/yelp_academic_datas
 
 YelpReviews <- stream_in(file("C:/Users/Matthew/Documents/yelp_academic_dataset_review.json"),pagesize = 500)
 
+#make each individual checkin its own row
+require(dplyr)
+require(tidyr)
+library(splitstackshape)
+
+YelpCheckins_v2 <- YelpCheckins
+
+YelpCheckins_v2 <- cSplit(YelpCheckins_v2, "time", sep = ",", direction = "long")
+YelpCheckins_v2
 
 
 #strip out businesses that aren't restaurants, have fewer than 50 reviews, or are no longer active
@@ -56,22 +65,11 @@ Restaurants_v3 <- subset(Restaurants_v2,review_count > 50)
 Restaurants_v4 <- merge(x=Restaurants_v3, y=YelpCheckins, by.x="business_id", by.y="business_id", all=TRUE)
 Restaurants_v5 <- subset(Restaurants_v4,is_open == 1)
 
-require(dplyr)
-require(tidyr)
-YelpCheckins
+Restaurants_v5$business_id <- as.character(Restaurants_v5$business_id)
 
-YelpCheckins %>% 
-    mutate(time = strsplit(as.character(time), ",")) %>% 
-    unnest(time)
+Restaurants_v5$checkin_count <- as.numeric(ave(Restaurants_v5$business_id, Restaurants_v5$business_id, FUN = length))
 
-
-Restaurants_v5 <- read.table(textConnection("1|a,b,c\n2|a,c\n3|b,d\n4|e,f"), header = F, sep = "|", stringsAsFactors = F)
-
-s <- strsplit(as.character(Restaurants_v5$time), split = ",")
-data.frame(business_id = rep(Restaurants_v5$business_id, sapply(s, length)), time = unlist(s))
-
-
-
+Restaurants_final <- subset(Restaurants_v5,!duplicated(business_id),-c(17))
 
 #require packages for logistic regression
 require(foreign)
@@ -82,32 +80,16 @@ require(MASS)
 require(ResourceSelection)
 
 #run ordered logistic regressions to assess the predictive power of rating, number of ratings, and location on restaurant checkins within the past year
-CheckinsLogitModel <- polr(as.factor(checkins_count) ~ review_count + stars, data=Restaurants_v5, Hess = TRUE)
+CheckinsLogitModel <- polr(as.factor(stars) ~ review_count, data=Restaurants_final, Hess = TRUE)
 summary(CheckinsLogitModel)
 
 
-
-
-
-
-
-#Runs logistic regression of demographic variables on Treatment Outcome Variable 
-Treat <- glm(Treatment ~ as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = MasterDataSet, family = "binomial")
-summary(Treat)
 
 #runs nearest neighbor PSM
 library(MatchIt)
 NearestNeighborPSM <- matchit(Treatment ~ as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = FinalMatchedDataSet, method = "nearest", distance ="logit")
 NearestNeighbor10PSM <- matchit(Treatment ~ as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = FinalMatchedDataSet, method = "nearest", distance ="logit",ratio=10)
 NearestNeighbor30PSM <- matchit(Treatment ~ as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = FinalMatchedDataSet, method = "nearest", distance ="logit",ratio=30)
-
-NearestNeighborPSMYearAdded <- matchit(Treatment ~ as.factor(FallYear) + as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = FinalMatchedDataSet, method = "nearest", distance ="logit")
-NearestNeighbor10PSMYearAdded <- matchit(Treatment ~ as.factor(FallYear) + as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = FinalMatchedDataSet, method = "nearest", distance ="logit",ratio=10)
-NearestNeighbor30PSMYearAdded <- matchit(Treatment ~ as.factor(FallYear) + as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = FinalMatchedDataSet, method = "nearest", distance ="logit",ratio=30)
-
-NearestNeighborPSMSchoolAdded <- matchit(Treatment ~ as.factor(SchoolLEA) + as.factor(FallYear) + as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = FinalMatchedDataSet, method = "nearest", distance ="logit")
-NearestNeighbor10PSMSchoolAdded <- matchit(Treatment ~ as.factor(SchoolLEA) + as.factor(FallYear) + as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = FinalMatchedDataSet, method = "nearest", distance ="logit",ratio=10)
-NearestNeighbor30PSMSchoolAdded <- matchit(Treatment ~ as.factor(SchoolLEA) + as.factor(FallYear) + as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = FinalMatchedDataSet, method = "nearest", distance ="logit",ratio=30)
 
 #produces summaries
 summary(NearestNeighborPSM)
@@ -122,14 +104,6 @@ summary(MatchedData$GK_AC)
 
 library(xlsx)
 write.xlsx(MatchedDataNNPSM10, "C:/Users/Matt/Documents/NearestNeighbordPSM10.xlsx")
-
-
-#match_cov %>% 
- # group_by( ) %>%
-  #summarise_each(funs(mean))
-
-#x0out <- sim(NearestNeighborPSM,x=)
-#summary(OptimalPSM)
 
 
 
