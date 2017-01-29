@@ -62,7 +62,7 @@ Restaurants_v2 <- filter(Restaurants_v1 , grepl('Restaurants',categories))
 Restaurants_v3 <- subset(Restaurants_v2,review_count > 50)
 
 #merge checkins data with restaurants data, matching on business_id
-Restaurants_v4 <- merge(x=Restaurants_v3, y=YelpCheckins, by.x="business_id", by.y="business_id", all=TRUE)
+Restaurants_v4 <- merge(x=Restaurants_v3, y=YelpCheckins_v2, by.x="business_id", by.y="business_id", all=TRUE)
 Restaurants_v5 <- subset(Restaurants_v4,is_open == 1)
 
 Restaurants_v5$business_id <- as.character(Restaurants_v5$business_id)
@@ -80,8 +80,12 @@ require(MASS)
 require(ResourceSelection)
 
 #run ordered logistic regressions to assess the predictive power of rating, number of ratings, and location on restaurant checkins within the past year
-CheckinsLogitModel <- polr(as.factor(stars) ~ review_count, data=Restaurants_final, Hess = TRUE)
-summary(CheckinsLogitModel)
+Stars_ReviewCount_LogitModel <- polr(as.factor(stars) ~ review_count, data=Restaurants_final, Hess = TRUE)
+Stars_Checkin_LogitModel <- polr(as.factor(stars) ~ checkin_count, data=Restaurants_final, Hess = TRUE)
+Stars_Location_LogitModel <- polr(as.factor(stars) ~ postal_code, data=Restaurants_final, Hess = TRUE)
+
+
+summary(Stars_Location_LogitModel)
 
 
 
@@ -118,32 +122,13 @@ write.xlsx(MatchedDataNNPSM10, "C:/Users/Matt/Documents/NearestNeighbordPSM10.xl
 ```{r Visualization, echo=FALSE}
 
 #visualize data
-
-################################
-###Presentation and Graphics###
-################################
-
-## store table
-ctable <- coef(summary(GeneralKnowledgeOrderedLogitModel))
-
-## calculate and store p values
-p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
-
-## combined table
-ctable <- cbind(ctable, "p value" = p)
-summary(ctable)
- 
-## boxplot
-ggplot(CleanControlDataMerged, aes(x = GK_AC, y = Special_Ed)) +
-  geom_boxplot(size = .75) +
-  geom_jitter(alpha = .5) +
-  facet_grid(pared ~ public, margins = TRUE) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+require(ggplot2)
+qplot(data=Restaurants_final,checkin_count)
+qplot(data=Restaurants_final,stars)
+qplot(data=Restaurants_final,review_count ,bin=50)
+qplot(data=Restaurants_final,review_count ,stars,geom="smooth")
 
 
-
-
-plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
