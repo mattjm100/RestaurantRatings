@@ -9,23 +9,29 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## 1. Overview of Dataset
 
-We explore the effect that ratings have on small and medium-sized (i.e. non-chain) restaurants in major US cities (depending on the amount of data available, we may limit analysis this to NYC). We'd use open APIs provided by Foursquare (and potentially Yelp) to access data on both reviews and check-ins (which we'd consider to be a proxy for sales). We will first look at the data before we come up with one or more crisp research questions, but we're thinking about something along the lines of the following:
+We tested a number of different hypotheses with respect to restaurants in major US cities. We used Yelp's Challenge Data - an open dataset with the following characteristics:
+
+- 4.1M reviews and 947K tips by 1M users for 144K businesses
+- 1.1M business attributes, e.g., hours, parking availability, ambience.
+- Aggregated check-ins over time for each of the 125K businesses
+- 200,000 pictures from the included businesses
+
+## 2. Key Business Questions and Data Analysis Process
+We sought primarily to answer the following questions
+
+
+1. Do significant (and secular) changes in ratings affect check-ins for established restaurants?
+2. 
  
-1.     Do significant (and secular) changes in ratings affect check-ins for established restaurants?
- 
-       The data that we are using from foursquare consists of check-ins over a given period of time for each restaurant.
-       Preparation of a treatment group: This consists of restaurants that have undergone a significant change in ratings (for e.g. a change >1) over a period of time.
-        o   We run logistic regressions on this data in order to determine the predictive power of various restaurant features on the outcome of interest namely changes in check-ins.
-        o   Using features that we identify as sufficiently predictive, we would conduct a propensity score matching ideally using “nearest neighbor matching”. This control group consists of restaurants that have not undergone a significant change in rating but are as similar as possible to the restaurants in the treatment group.
-              ·  We would use this matched control group to ascertain the impact of the change in rating to the restaurants in the treatment group.
- 
-2.     To what extent does an increase (or decrease) in ratings explain the variance in check-ins? 
-        ·      Perform a regression analysis (using ordered logistic regression) to determine the correlation between ratings and check-ins
- 
-3. For businesses with the same rating, how important is the distribution of ratings (i.e. does having a higher proportion of one-star ratings make a difference?) 
-        ·      Repeat approach of Step 1. with treatment groups selected based on variance of ratings in the 90th percentile
+
+we divided the data into training and test sets, in order to be able to ideally build a predictive model for either restaurant ratings, checkins, or both, and then test the model on the test set. 
+
+We ran ordered logistic regression and linear regresssions on this data in order to determine the predictive power of various restaurant features on the outcome of interest namely changes in check-ins.
+
+
+## 3. Data Import, Cleaning, and Analysis
 
 ```{r Analysis}
 
@@ -39,29 +45,40 @@ YelpCheckins <- stream_in(file("C:/Users/Matthew/Documents/yelp_academic_dataset
 
 YelpBusinesses <- stream_in(file("C:/Users/Matthew/Documents/yelp_academic_dataset_business.json"),pagesize = 500)
 
-YelpReviews <- stream_in(file("C:/Users/Matthew/Documents/yelp_academic_dataset_review.json"),pagesize = 500)
-
 #make each individual checkin its own row
 require(dplyr)
 require(tidyr)
 library(splitstackshape)
 
 YelpCheckins_v2 <- YelpCheckins
-
 YelpCheckins_v2 <- cSplit(YelpCheckins_v2, "time", sep = ",", direction = "long")
-YelpCheckins_v2
+
+require(RCurl)
+require(xlsx)
+require(readxl)
+
+urlfile <-'http://www.psc.isr.umich.edu/dis/census/Features/tract2zip/MedianZIP-3.xlsx'
+destfile <- "census20062010.xlsx"
+download.file(urlfile, destfile, mode="wb")
+census <- read_excel(destfile, sheet = "Median")
+
+# clean up data
+names(census) <- c('postal_code','median_income','population')
+census$median_income <- as.character(census$median_income)
+census$median_income <- as.numeric(gsub(',','',census$median_income))
+print(head(census,5))
 
 
-#strip out businesses that aren't restaurants, have fewer than 50 reviews, or are no longer active
+#strip out businesses that aren't restaurants, have fewer than 25 reviews, or are no longer active
 require(plyr)
 library(tidyverse)
 library(stringr)
 
 Restaurants_v1 <- subset(YelpBusinesses,is_open == 1)
 Restaurants_v2 <- filter(Restaurants_v1 , grepl('Restaurants',categories))
-Restaurants_v3 <- subset(Restaurants_v2,review_count > 50)
+Restaurants_v3 <- subset(Restaurants_v2,review_count > 25)
 
-#merge checkins data with restaurants data, matching on business_id
+#merge checkins data with restaurants data, matching on business_id; remove restaurants located outside the US
 Restaurants_v4 <- merge(x=Restaurants_v3, y=YelpCheckins_v2, by.x="business_id", by.y="business_id", all=TRUE)
 Restaurants_v5 <- subset(Restaurants_v4,is_open == 1)
 
@@ -69,7 +86,50 @@ Restaurants_v5$business_id <- as.character(Restaurants_v5$business_id)
 
 Restaurants_v5$checkin_count <- as.numeric(ave(Restaurants_v5$business_id, Restaurants_v5$business_id, FUN = length))
 
-Restaurants_final <- subset(Restaurants_v5,!duplicated(business_id),-c(17))
+Restaurants_v6 <- subset(Restaurants_v5,!duplicated(business_id),-c(17))
+Restaurants_v7 <- subset(Restaurants_v6,nchar(postal_code)==5)
+
+Restaurants_v8 <- merge(x=Restaurants_v7,y=census,by.x="postal_code",by.y = "postal_code",scale(population))
+
+ScaledMedianIncome <- scale(Restaurants_v8$median_income)
+ScaledPopulation <- scale(Restaurants_v8$population)
+Restaurants_v8$median_income <- ScaledMedianIncome
+Restaurants_v8$population <- ScaledPopulation
+Restaurants_final <- Restaurants_v8
+
+
+#Divides restaurant dataset into training set and test set 
+RestaurantsTestSet <- Restaurants_final[sample(nrow(Restaurants_final), 11431/2), ]
+Restaurants_New <- merge(x=Restaurants_final,y=RestaurantsTestSet, by.x = "business_id", by.y = "business_id",all=TRUE)
+RestaurantsTrainingSet <- subset(Restaurants_New,attributes.y == "NA")
+
+#Checks for equivalence of training set and test set 
+mean(RestaurantsTestSet$stars,na.rm=TRUE) 
+mean(RestaurantsTrainingSet$stars.x,na.rm=TRUE)
+sd(RestaurantsTestSet$stars,na.rm=TRUE) 
+sd(RestaurantsTrainingSet$stars.x,na.rm=TRUE) 
+
+mean(RestaurantsTestSet$stars,na.rm=TRUE) - mean(RestaurantsTrainingSet$stars.x,na.rm=TRUE)
+sd(RestaurantsTestSet$stars,na.rm=TRUE) - sd(RestaurantsTrainingSet$stars.x,na.rm=TRUE) 
+
+mean(RestaurantsTestSet$checkin_count,na.rm=TRUE) 
+mean(RestaurantsTrainingSet$checkin_count.x,na.rm=TRUE)
+sd(RestaurantsTestSet$checkin_count,na.rm=TRUE)
+sd(RestaurantsTrainingSet$checkin_count.x,na.rm=TRUE) 
+
+mean(RestaurantsTestSet$checkin_count,na.rm=TRUE) - mean(RestaurantsTrainingSet$checkin_count.x,na.rm=TRUE)
+sd(RestaurantsTestSet$checkin_count,na.rm=TRUE) - sd(RestaurantsTrainingSet$checkin_count.x,na.rm=TRUE) 
+
+mean(RestaurantsTestSet$review_count,na.rm=TRUE)
+mean(RestaurantsTrainingSet$review_count.x,na.rm=TRUE)
+sd(RestaurantsTestSet$review_count,na.rm=TRUE) 
+sd(RestaurantsTrainingSet$review_count.x,na.rm=TRUE) 
+
+mean(RestaurantsTestSet$review_count,na.rm=TRUE) - mean(RestaurantsTrainingSet$review_count.x,na.rm=TRUE)
+sd(RestaurantsTestSet$review_count,na.rm=TRUE) - sd(RestaurantsTrainingSet$review_count.x,na.rm=TRUE) 
+
+sapply(RestaurantsTestSet,mean, na.rm=TRUE)
+sapply(RestaurantsTrainingSet,mean,na.rm=TRUE)
 
 #require packages for logistic regression
 require(foreign)
@@ -79,56 +139,81 @@ require(reshape2)
 require(MASS)
 require(ResourceSelection)
 
-#run ordered logistic regressions to assess the predictive power of rating, number of ratings, and location on restaurant checkins within the past year
-Stars_ReviewCount_LogitModel <- polr(as.factor(stars) ~ review_count, data=Restaurants_final, Hess = TRUE)
-Stars_Checkin_LogitModel <- polr(as.factor(stars) ~ checkin_count, data=Restaurants_final, Hess = TRUE)
-Stars_Location_LogitModel <- polr(as.factor(stars) ~ postal_code, data=Restaurants_final, Hess = TRUE)
+#run ordered logistic regressions to assess the predictive power of checkins, number of ratings, median income, and population on restaurant ratings
+Stars_ReviewCount_LogitModel <- polr(as.factor(stars.x) ~ review_count.x, data=RestaurantsTrainingSet, Hess = TRUE)
+Stars_Checkin_LogitModel <- polr(as.factor(stars.x) ~ checkin_count.x, data=RestaurantsTrainingSet, Hess = TRUE)
+Stars_MedianIncome_LogitModel <- polr(as.factor(stars.x) ~ median_income.x, data=RestaurantsTrainingSet, Hess = TRUE)
+Stars_Population_LogitModel <- polr(as.factor(stars.x) ~ population.x, data=RestaurantsTrainingSet, Hess = TRUE)
 
+#run linear regressions to assess the predictive power of checkins, number of ratings, population, and median income on restaurant ratings 
+Stars_ReviewCount_LinearModel <- glm((stars.x) ~ review_count.x, data=RestaurantsTrainingSet)
+Stars_Checkin_LinearModel <- glm((stars.x) ~ checkin_count.x, data=RestaurantsTrainingSet)
+Stars_Income_LinearModel <- glm((stars.x) ~ median_income.x, data=RestaurantsTrainingSet)
+Stars_Population_LinearModel <- glm((stars.x) ~ population.x, data=RestaurantsTrainingSet)
 
-summary(Stars_Location_LogitModel)
+#run linear regressions to assess the predictive power of stars, number of ratings, population, and income on restaurant checkins 
+Checkins_ReviewCount_LinearModel <- glm((checkin_count.x) ~ review_count.x, data=RestaurantsTrainingSet)
+Checkins_Stars_LinearModel <- glm((checkin_count.x) ~ stars.x, data=RestaurantsTrainingSet)
+Checkins_Income_LinearModel <- glm((checkin_count.x) ~ median_income.x, data=RestaurantsTrainingSet)
+Checkins_Population_LinearModel <- glm((checkin_count.x) ~ population.x, data=RestaurantsTrainingSet)
 
+#Produce summaries
+summary(Stars_ReviewCount_LogitModel)
+summary(Stars_Checkin_LogitModel)
+summary(Stars_MedianIncome_LogitModel)
+summary(Stars_Population_LogitModel)
 
+summary(Stars_ReviewCount_LinearModel)
+summary(Stars_Checkin_LinearModel)
+summary(Stars_Income_LinearModel)
+summary(Stars_Population_LinearModel)
 
-#runs nearest neighbor PSM
-library(MatchIt)
-NearestNeighborPSM <- matchit(Treatment ~ as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = FinalMatchedDataSet, method = "nearest", distance ="logit")
-NearestNeighbor10PSM <- matchit(Treatment ~ as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = FinalMatchedDataSet, method = "nearest", distance ="logit",ratio=10)
-NearestNeighbor30PSM <- matchit(Treatment ~ as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed , data = FinalMatchedDataSet, method = "nearest", distance ="logit",ratio=30)
-
-#produces summaries
-summary(NearestNeighborPSM)
-library(dplyr)
-match_cov <- select(m.dat, as.factor(Race_Eth) + Meal_Status_detail + Gender + Special_Ed)
-MatchedDataNNPSM10 <- match.data(NearestNeighborPSM)
-summary(MatchedDataNNPSM10)
-as.numeric(MatchedData$GK_AC)
-mean(MatchedData,GK_AC)
-
-summary(MatchedData$GK_AC)
-
-library(xlsx)
-write.xlsx(MatchedDataNNPSM10, "C:/Users/Matt/Documents/NearestNeighbordPSM10.xlsx")
-
-
+summary(Checkins_ReviewCount_LinearModel)
+summary(Checkins_Stars_LinearModel )
+summary(Checkins_Income_LinearModel)
+summary(Checkins_Population_LinearModel)
 
 
 
 
 ```
 
-## Including Plots
+## 4. Data Visualization
 
 
 ```{r Visualization, echo=FALSE}
 
 #visualize data
 require(ggplot2)
+require(ggmap)
+
 qplot(data=Restaurants_final,checkin_count)
 qplot(data=Restaurants_final,stars)
-qplot(data=Restaurants_final,review_count ,bin=50)
 qplot(data=Restaurants_final,review_count ,stars,geom="smooth")
+
+qplot(data=RestaurantsTrainingSet,checkin_count.x)
+qplot(data=RestaurantsTrainingSet,stars.x)
+qplot(data=RestaurantsTrainingSet,review_count.x ,stars.x,geom="smooth")
+
+qplot(data=RestaurantsTestSet,checkin_count)
+qplot(data=RestaurantsTestSet,stars)
+qplot(data=RestaurantsTestSet,review_count ,stars,geom="smooth")
+
+map<-get_map(location='united states', zoom=4, maptype = "terrain",
+             source='google',color='color')
+
+ggmap(map) + geom_point(
+        aes(x=longitude, y=latitude, show_guide = TRUE, colour=checkin_count), 
+        data=Restaurants_final, alpha=.5, na.rm = T)  + 
+        scale_color_gradient(low="red", high="blue")
+
+ggmap(map) + geom_point(
+        aes(x=longitude, y=latitude, show_guide = TRUE, colour=stars), 
+        data=Restaurants_final, alpha=.5, na.rm = T)  + 
+        scale_color_gradient(low="red", high="blue")
 
 
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
