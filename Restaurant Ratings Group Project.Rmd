@@ -23,7 +23,7 @@ We sought primarily to answer the following questions:
 
 1. What does the distribution of ratings and checkins look like for Yelp-listed restaurants in major US metropolitan areas? 
 2. To what extent can restaurant location (using population and median income of the zip code in which it is located as proxies) explain the variance in restaurant ratings and/or checkins? 
-3. Are there any other meaninful relationships or inferences we can draw between a restaurant ratings and restaurant location, customer propensity to review the restaurant, or customer propensity to check in at the restaurant? 
+3. Are there any other meaninful relationships or inferences we can draw between restaurant ratings and restaurant location, customer propensity to review the restaurant, or customer propensity to check in at the restaurant? 
 
 We divided the data into training and test sets, in order to be able to ideally build a predictive model for either restaurant ratings, checkins, or both, and then test the model on the test set. 
 
