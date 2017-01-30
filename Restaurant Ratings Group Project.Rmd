@@ -88,6 +88,50 @@ Restaurants_v5$checkin_count <- as.numeric(ave(Restaurants_v5$business_id, Resta
 
 Restaurants_v6 <- subset(Restaurants_v5,!duplicated(business_id),-c(17))
 Restaurants_v7 <- subset(Restaurants_v6,nchar(postal_code)==5)
+<<<<<<< HEAD
+
+Restaurants_v8 <- merge(x=Restaurants_v7,y=census,by.x="postal_code",by.y = "postal_code",scale(population))
+
+ScaledMedianIncome <- scale(Restaurants_v8$median_income)
+ScaledPopulation <- scale(Restaurants_v8$population)
+Restaurants_v8$median_income <- ScaledMedianIncome
+Restaurants_v8$population <- ScaledPopulation
+Restaurants_final <- Restaurants_v8
+
+
+#Divides restaurant dataset into training set and test set 
+RestaurantsTestSet <- Restaurants_final[sample(nrow(Restaurants_final), 11431/2), ]
+Restaurants_New <- merge(x=Restaurants_final,y=RestaurantsTestSet, by.x = "business_id", by.y = "business_id",all=TRUE)
+RestaurantsTrainingSet <- subset(Restaurants_New,attributes.y == "NA")
+
+#Checks for equivalence of training set and test set 
+mean(RestaurantsTestSet$stars,na.rm=TRUE) 
+mean(RestaurantsTrainingSet$stars.x,na.rm=TRUE)
+sd(RestaurantsTestSet$stars,na.rm=TRUE) 
+sd(RestaurantsTrainingSet$stars.x,na.rm=TRUE) 
+
+mean(RestaurantsTestSet$stars,na.rm=TRUE) - mean(RestaurantsTrainingSet$stars.x,na.rm=TRUE)
+sd(RestaurantsTestSet$stars,na.rm=TRUE) - sd(RestaurantsTrainingSet$stars.x,na.rm=TRUE) 
+
+mean(RestaurantsTestSet$checkin_count,na.rm=TRUE) 
+mean(RestaurantsTrainingSet$checkin_count.x,na.rm=TRUE)
+sd(RestaurantsTestSet$checkin_count,na.rm=TRUE)
+sd(RestaurantsTrainingSet$checkin_count.x,na.rm=TRUE) 
+
+mean(RestaurantsTestSet$checkin_count,na.rm=TRUE) - mean(RestaurantsTrainingSet$checkin_count.x,na.rm=TRUE)
+sd(RestaurantsTestSet$checkin_count,na.rm=TRUE) - sd(RestaurantsTrainingSet$checkin_count.x,na.rm=TRUE) 
+
+mean(RestaurantsTestSet$review_count,na.rm=TRUE)
+mean(RestaurantsTrainingSet$review_count.x,na.rm=TRUE)
+sd(RestaurantsTestSet$review_count,na.rm=TRUE) 
+sd(RestaurantsTrainingSet$review_count.x,na.rm=TRUE) 
+
+mean(RestaurantsTestSet$review_count,na.rm=TRUE) - mean(RestaurantsTrainingSet$review_count.x,na.rm=TRUE)
+sd(RestaurantsTestSet$review_count,na.rm=TRUE) - sd(RestaurantsTrainingSet$review_count.x,na.rm=TRUE) 
+
+sapply(RestaurantsTestSet,mean, na.rm=TRUE)
+sapply(RestaurantsTrainingSet,mean,na.rm=TRUE)
+=======
 
 Restaurants_v8 <- merge(x=Restaurants_v7,y=census,by.x="postal_code",by.y = "postal_code",scale(population))
 
@@ -172,14 +216,62 @@ summary(Checkins_ReviewCount_LinearModel)
 summary(Checkins_Stars_LinearModel )
 summary(Checkins_Income_LinearModel)
 summary(Checkins_Population_LinearModel)
+>>>>>>> a441dee5e3e9414ac236a063d2275fcabeca5bf0
 
+#require packages for logistic regression
+require(foreign)
+require(nnet)
+require(ggplot2)
+require(reshape2)
+require(MASS)
+require(ResourceSelection)
 
+#run ordered logistic regressions to assess the predictive power of checkins, number of ratings, median income, and population on restaurant ratings
+Stars_ReviewCount_LogitModel <- polr(as.factor(stars.x) ~ review_count.x, data=RestaurantsTrainingSet, Hess = TRUE)
+Stars_Checkin_LogitModel <- polr(as.factor(stars.x) ~ checkin_count.x, data=RestaurantsTrainingSet, Hess = TRUE)
+Stars_MedianIncome_LogitModel <- polr(as.factor(stars.x) ~ median_income.x, data=RestaurantsTrainingSet, Hess = TRUE)
+Stars_Population_LogitModel <- polr(as.factor(stars.x) ~ population.x, data=RestaurantsTrainingSet, Hess = TRUE)
+
+#run linear regressions to assess the predictive power of checkins, number of ratings, population, and median income on restaurant ratings 
+Stars_ReviewCount_LinearModel <- glm((stars.x) ~ review_count.x, data=RestaurantsTrainingSet)
+Stars_Checkin_LinearModel <- glm((stars.x) ~ checkin_count.x, data=RestaurantsTrainingSet)
+Stars_Income_LinearModel <- glm((stars.x) ~ median_income.x, data=RestaurantsTrainingSet)
+Stars_Population_LinearModel <- glm((stars.x) ~ population.x, data=RestaurantsTrainingSet)
+
+#run linear regressions to assess the predictive power of stars, number of ratings, population, and income on restaurant checkins 
+Checkins_ReviewCount_LinearModel <- glm((checkin_count.x) ~ review_count.x, data=RestaurantsTrainingSet)
+Checkins_Stars_LinearModel <- glm((checkin_count.x) ~ stars.x, data=RestaurantsTrainingSet)
+Checkins_Income_LinearModel <- glm((checkin_count.x) ~ median_income.x, data=RestaurantsTrainingSet)
+Checkins_Population_LinearModel <- glm((checkin_count.x) ~ population.x, data=RestaurantsTrainingSet)
+
+#Produce summaries
+summary(Stars_ReviewCount_LogitModel)
+summary(Stars_Checkin_LogitModel)
+summary(Stars_MedianIncome_LogitModel)
+summary(Stars_Population_LogitModel)
+
+summary(Stars_ReviewCount_LinearModel)
+summary(Stars_Checkin_LinearModel)
+summary(Stars_Income_LinearModel)
+summary(Stars_Population_LinearModel)
+
+summary(Checkins_ReviewCount_LinearModel)
+summary(Checkins_Stars_LinearModel )
+summary(Checkins_Income_LinearModel)
+summary(Checkins_Population_LinearModel)
 
 
 ```
 
 ## 4. Data Visualization
+<<<<<<< HEAD
+The following charts are intended to allow us to visualize:
+=======
+>>>>>>> a441dee5e3e9414ac236a063d2275fcabeca5bf0
 
+1. the distribution of checkins, stars, and number of reviews for all the restaurants in our dataset
+2. the equivalence between the training and test sets with respect to the key features we focused on
+3. the geographic distribution of the restaurants in our sample 
 
 ```{r Visualization, echo=FALSE}
 
