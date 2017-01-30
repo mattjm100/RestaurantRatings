@@ -19,16 +19,15 @@ We tested a number of different hypotheses with respect to restaurants in major 
 - 200,000 pictures from the included businesses
 
 ## 2. Key Business Questions and Data Analysis Process
-We sought primarily to answer the following questions
+We sought primarily to answer the following questions:
 
+1. What does the distribution of ratings and checkins look like for Yelp-listed restaurants in major US metropolitan areas? 
+2. To what extent can restaurant location (using population and median income of the zip code in which it is located as proxies) explain the variance in restaurant ratings and/or checkins? 
+3. Are there any other meaninful relationships or inferences we can draw between a restaurant ratings and restaurant location, customer propensity to review the restaurant, or customer propensity to check in at the restaurant? 
 
-1. Do significant (and secular) changes in ratings affect check-ins for established restaurants?
-2. 
- 
+We divided the data into training and test sets, in order to be able to ideally build a predictive model for either restaurant ratings, checkins, or both, and then test the model on the test set. 
 
-we divided the data into training and test sets, in order to be able to ideally build a predictive model for either restaurant ratings, checkins, or both, and then test the model on the test set. 
-
-We ran ordered logistic regression and linear regresssions on this data in order to determine the predictive power of various restaurant features on the outcome of interest namely changes in check-ins.
+We ran ordered logistic regression and linear regresssions on this data in order to determine the predictive power of various restaurant features on the outcomes of interest, namely stars and checkins. 
 
 
 ## 3. Data Import, Cleaning, and Analysis
@@ -88,7 +87,6 @@ Restaurants_v5$checkin_count <- as.numeric(ave(Restaurants_v5$business_id, Resta
 
 Restaurants_v6 <- subset(Restaurants_v5,!duplicated(business_id),-c(17))
 Restaurants_v7 <- subset(Restaurants_v6,nchar(postal_code)==5)
-<<<<<<< HEAD
 
 Restaurants_v8 <- merge(x=Restaurants_v7,y=census,by.x="postal_code",by.y = "postal_code",scale(population))
 
@@ -97,7 +95,6 @@ ScaledPopulation <- scale(Restaurants_v8$population)
 Restaurants_v8$median_income <- ScaledMedianIncome
 Restaurants_v8$population <- ScaledPopulation
 Restaurants_final <- Restaurants_v8
-
 
 #Divides restaurant dataset into training set and test set 
 RestaurantsTestSet <- Restaurants_final[sample(nrow(Restaurants_final), 11431/2), ]
@@ -131,7 +128,7 @@ sd(RestaurantsTestSet$review_count,na.rm=TRUE) - sd(RestaurantsTrainingSet$revie
 
 sapply(RestaurantsTestSet,mean, na.rm=TRUE)
 sapply(RestaurantsTrainingSet,mean,na.rm=TRUE)
-=======
+
 
 Restaurants_v8 <- merge(x=Restaurants_v7,y=census,by.x="postal_code",by.y = "postal_code",scale(population))
 
@@ -216,7 +213,6 @@ summary(Checkins_ReviewCount_LinearModel)
 summary(Checkins_Stars_LinearModel )
 summary(Checkins_Income_LinearModel)
 summary(Checkins_Population_LinearModel)
->>>>>>> a441dee5e3e9414ac236a063d2275fcabeca5bf0
 
 #require packages for logistic regression
 require(foreign)
@@ -304,8 +300,6 @@ ggmap(map) + geom_point(
         data=Restaurants_final, alpha=.5, na.rm = T)  + 
         scale_color_gradient(low="red", high="blue")
 
-
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
