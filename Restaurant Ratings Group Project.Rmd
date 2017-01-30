@@ -260,10 +260,7 @@ summary(Checkins_Population_LinearModel)
 ```
 
 ## 4. Data Visualization
-<<<<<<< HEAD
 The following charts are intended to allow us to visualize:
-=======
->>>>>>> a441dee5e3e9414ac236a063d2275fcabeca5bf0
 
 1. the distribution of checkins, stars, and number of reviews for all the restaurants in our dataset
 2. the equivalence between the training and test sets with respect to the key features we focused on
